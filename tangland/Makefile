@@ -3,13 +3,14 @@ FAMILY  := GW1N-9C # pnr
 DEVICE  := GW1NR-LV9QN88PC6/I5 # pnr
 PC_FILE := ${BOARD}.cst # constraints
 PROJ    := app
+FPGA_TOP := fpga.v
 
 
 all: ${PROJ}.fs
 
 # synth
-${PROJ}.json: top.v
-	yosys -p "read_verilog top.v; synth_gowin -json ${PROJ}.json"
+${PROJ}.json: ${FPGA_TOP}
+	yosys -p "read_verilog ${FPGA_TOP}; synth_gowin -json ${PROJ}.json"
 
 # pnr
 ${PROJ}_pnr.json: ${PROJ}.json
