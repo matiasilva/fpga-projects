@@ -11,4 +11,15 @@ module top (
    output lcd_cs
 );
 
+
+proj_wrapper p0 ( .clk (clk),
+                  .rst (rst),
+                  .led (led),
+                  .lcd_rst (lcd_rst),
+                  .lcd_rs (lcd_rs),
+                  .lcd_sd (lcd_sd),
+                  .lcd_scl (lcd_scl),
+                  .lcd_cs (lcd_cs));
+
+
 endmodule

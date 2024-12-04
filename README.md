@@ -6,7 +6,7 @@ This repo houses a collection of projects on FPGA boards that I've used. These a
 * the TangNano 9kandand
 * the Xilinx Zynq-7000
 
-Most projects use the open source suite of tools for simulation, synthesis and place-and-route.
+Most projects use the open source suite of tools for simulation, synthesis and place-and-route. All code written by me, unless specified otherwise.
 
 ## Development
 

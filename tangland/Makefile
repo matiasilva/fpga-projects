@@ -1,20 +1,22 @@
-BOARD   := tangnano9k # openFPGALoader name
-FAMILY  := GW1N-9C # pnr
-DEVICE  := GW1NR-LV9QN88PC6/I5 # pnr
-PC_FILE := ${BOARD}.cst # constraints
+BOARD   := tangnano9k
+FAMILY  := GW1N-9C
+DEVICE  := GW1NR-LV9QN88PC6/I5
+PC_FILE := ${BOARD}.cst
+
 PROJ    := app
-FPGA_TOP := fpga.v
+SOURCES := fpga.v hdl/lcd_basic/proj_wrapper.v, hdl/lcd_basic/lcd_st7789v3.v
+YOSYS_DEFINES := -DN_LEDS=6
 
 
 all: ${PROJ}.fs
 
 # synth
-${PROJ}.json: ${FPGA_TOP}
-	yosys -p "read_verilog ${FPGA_TOP}; synth_gowin -json ${PROJ}.json"
+${PROJ}.json: ${SOURCES}
+	yosys ${YOSYS_DEFINES} -p "read_verilog $<; synth_gowin -top top -json $@" ${SOURCES}
 
 # pnr
 ${PROJ}_pnr.json: ${PROJ}.json
-	nextpnr-himbaechel --json ${PROJ}.json --write ${PROJ}_pnr.json --freq 27 --device ${DEVICE} --vopt family=${FAMILY} --vopt cst=${PC_FILE}
+	nextpnr-himbaechel --json ${PROJ}.json --write $@ --freq 27 --device ${DEVICE} --vopt family=${FAMILY} --vopt cst=${PC_FILE}
 
 # bitstream
 ${PROJ}.fs: ${PROJ}_pnr.json
@@ -26,14 +28,14 @@ load: ${PROJ}.fs
 
 # sim pt. 1
 ${PROJ}_test.o: ${PROJ}.v ${PROJ}_tb.v
-	iverilog -o ${PROJ}_test.o -s test ${PROJ}.v ${PROJ}_tb.v
+	iverilog -o $@ -s test ${PROJ}.v ${PROJ}_tb.v
 
 # sim pt. 2
 ${PROJ}.vcd: ${PROJ}_test.o
-	vvp ${PROJ}_test.o
+	vvp $<
 
 sim: ${PROJ}.vcd
-	gtkwave ${PROJ}.vcd
+	gtkwave $<
 
 # Cleanup build artifacts
 clean:
