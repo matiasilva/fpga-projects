@@ -23,6 +23,14 @@ A demonstration of the 1.4inch LCD display with ST7789V3 driver IC, communicatio
 * SDA: serial data (bidirectional)
 * RST: reset (active low, min 10us)
 
+## Timing
+
+A successful HW reset needs:
+
+1. Reset asserted for >10us, active low
+2. No further activity for at least 120ms
+
+
 ## Frame data
 
 * 1 byte per color component with upper 6 bits containing valid data

@@ -34,6 +34,9 @@ ${PROJ}_test.o: ${PROJ}.v ${PROJ}_tb.v
 ${PROJ}.vcd: ${PROJ}_test.o
 	vvp $<
 
+lint:
+	verilator --lint-only -Wall -I$(dir ${LF}) ${LF}
+
 sim: ${PROJ}.vcd
 	gtkwave $<
 
@@ -41,5 +44,5 @@ sim: ${PROJ}.vcd
 clean:
 	rm ${PROJ}.vcd ${PROJ}.fs ${PROJ}_test.o
 
-.PHONY: load clean sim
+.PHONY: load clean sim lint
 .INTERMEDIATE: ${PROJ}_pnr.json ${PROJ}.json ${PROJ}_test.o
