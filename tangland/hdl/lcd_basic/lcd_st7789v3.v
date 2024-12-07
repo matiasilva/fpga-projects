@@ -34,64 +34,41 @@ reg [(INITSEQ_SIZE*8)-1:0] INITSEQ = {
    `DISPON_CMD , SHORT_DLY
    }; // implied initial
 
-localparam INITSEQ_CMD  = 2'b00;
-localparam INITSEQ_META = 2'b01;
-localparam INITSEQ_ARG  = 2'b11;
+typedef enum reg[1:0] {
+   INITSEQ_CMD,
+   INITSEQ_META,
+   INITSEQ_ARG
+} initseq_type;
 
-localparam DRIVER_IDLE    = 3'b000;
-localparam DRIVER_HWRST   = 3'b001;
-localparam DRIVER_INITSEQ = 3'b010;
-localparam DRIVER_WRMEM   = 3'b011;
-localparam DRIVER_START   = 3'b100;
+typedef enum reg[2:0] {
+   DRIVER_IDLE,
+   DRIVER_HWRST,
+   DRIVER_INITSEQ,
+   DRIVER_WRMEM,
+   DRIVER_START
+} driver_state_t;
 
-reg [2:0] cur_state, nxt_state;
+typedef enum reg[2:0] {
+   BUSY_IDLE,
+   BUSY_ACTIVE
+} busy_state_t;
 
-always @(*) begin
-   nxt_state = cur_state;
+localparam   BUSY_CTR_WIDTH = 16;
+localparam   BUSY_CTR_DECR  = 10;
 
-   case (cur_state)
-      DRIVER_START: begin
-         busy_en = 1'b1;
-         busy_dly = 
-         if (busy_done) nxt_state = DRIVER_HWRST;
-      end
-      DRIVER_HWRST: begin
-      end
-      DRIVER_INITSEQ: begin
-      end
-      DRIVER_WRMEM: begin
-      end
-   endcase
-
-end
-
-always @(posedge clk or negedge rst) begin
-   if (~rst) begin
-      cur_state <= DRIVER_START;
-   end else begin
-      cur_state <= nxt_state;
-   end
-end
-
-
-wire busy_en;
-wire [BUSY_CTR_WIDTH-1:0] busy_dly;
-wire busy_done = busy_en && busy_active && busy_ctr == 0;
+busy_state_t busy_state ;
+reg busy_en;
 wire busy_active = busy_state == BUSY_ACTIVE;
+reg [BUSY_CTR_WIDTH-1:0] busy_dly;
 reg [BUSY_CTR_WIDTH-1:0] busy_ctr;
-reg busy_state;
-
-localparam BUSY_IDLE = 0;
-localparam BUSY_ACTIVE = 1;
-localparam BUSY_CTR_WIDTH = 16;
-localparam BUSY_CTR_DECR = 10;
+wire busy_done = busy_en && busy_active && busy_ctr == 0;
 
 always @(posedge clk or negedge rst) begin
    if (~rst) begin
       busy_state <= BUSY_IDLE;
       busy_ctr <= 0;
    end else begin
-      if (!busy_state) begin
+      if (busy_state == BUSY_IDLE) begin
          if (busy_en) begin
             busy_ctr <= busy_dly;
             busy_state <= BUSY_ACTIVE;
@@ -120,6 +97,7 @@ always @(posedge clk or negedge rst) begin
    end
 end
 */
+
 /* serializer */
 
 reg [7:0] frame;
@@ -135,13 +113,40 @@ always @(posedge clk or negedge rst) begin
       if (wr_frame) begin
          frame <= 8'b0;
       end
-
    end
+end
 
+driver_state_t cur_state, nxt_state;
 
+always @(*) begin
+   nxt_state = cur_state;
+
+   busy_en = 1'b0;
+   busy_dly = 0;
+   case (cur_state)
+      DRIVER_START: begin
+         busy_en = 1'b1;
+         busy_dly = 536;
+         if (busy_done) nxt_state = DRIVER_HWRST;
+      end
+      DRIVER_HWRST: begin
+
+      end
+      DRIVER_INITSEQ: begin
+      end
+      DRIVER_WRMEM: begin
+      end
+   endcase
 
 end
 
+always @(posedge clk or negedge rst) begin
+   if (~rst) begin
+      cur_state <= DRIVER_START;
+   end else begin
+      cur_state <= nxt_state;
+   end
+end
 
 assign lcd_rst = io_rst;
 assign lcd_rs = io_rs;
