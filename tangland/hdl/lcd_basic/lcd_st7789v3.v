@@ -1,6 +1,17 @@
 `include "lcd_st7789v3.vh"
 `default_nettype none
 
+`ifdef FPGA
+   `define CLKFREQ 13.5*1000000
+   `define LONG_DLY_CYCLES 0.2*`CLKFREQ // 200ms
+   `define SHORT_DLY_CYCLES 0.01*`CLKFREQ // 10ms
+   `define HWRST_CYCLES 0.00002*`CLKFREQ // 20us
+`else
+   `define LONG_DLY_CYCLES 50
+   `define SHORT_DLY_CYCLES 10
+   `define HWRST_CYCLES 4
+`endif
+
 module lcd_st7789v3 (
    input  clk,
    input  rst,
@@ -11,7 +22,7 @@ module lcd_st7789v3 (
    output lcd_cs
 );
 
-wire io_rst;
+reg io_rst;
 wire io_rs;
 wire io_sd;
 wire io_scl;
@@ -23,6 +34,7 @@ localparam SHORT_DLY     =  8'h80; // 10 ms
 localparam ARG_BITS      =  8'h3f; // max 63 args
 localparam DISP_WIDTH    =  16'd135;
 localparam DISP_HEIGHT   =  16'd240;
+
 
 reg [(INITSEQ_SIZE*8)-1:0] INITSEQ = {
    `SWRESET_CMD, LONG_DLY ,
@@ -54,7 +66,6 @@ typedef enum reg[2:0] {
 } busy_state_t;
 
 localparam   BUSY_CTR_WIDTH = 16;
-localparam   BUSY_CTR_DECR  = 10;
 
 busy_state_t busy_state ;
 reg busy_en;
@@ -70,7 +81,7 @@ always @(posedge clk or negedge rst) begin
    end else begin
       if (busy_state == BUSY_IDLE) begin
          if (busy_en) begin
-            busy_ctr <= busy_dly;
+            busy_ctr <= busy_dly - 1;
             busy_state <= BUSY_ACTIVE;
          end
       end else begin
@@ -82,21 +93,6 @@ always @(posedge clk or negedge rst) begin
       end
    end
 end
-
-/*
-
-integer initseq_ptr = 0;
-reg [1:0] initseq_type;
-assign io_rs = initseq_type == INITSEQ_CMD ? 1'b0 : 1'b1;
-
-always @(posedge clk or negedge rst) begin
-   if (~rst) begin
-      initseq_type <= INITSEQ_CMD;
-   end else begin
-
-   end
-end
-*/
 
 /* serializer */
 
@@ -123,16 +119,22 @@ always @(*) begin
 
    busy_en = 1'b0;
    busy_dly = 0;
+
+   io_rst = 1'b1;
    case (cur_state)
       DRIVER_START: begin
          busy_en = 1'b1;
-         busy_dly = 536;
+         busy_dly = `LONG_DLY_CYCLES;
          if (busy_done) nxt_state = DRIVER_HWRST;
       end
       DRIVER_HWRST: begin
-
+         io_rst = 1'b0;
+         busy_en = 1'b1;
+         busy_dly = `HWRST_CYCLES;
+         if(busy_done) nxt_state = DRIVER_INITSEQ;
       end
       DRIVER_INITSEQ: begin
+         if (initseq_done) nxt_state = DRIVER_WRMEM;
       end
       DRIVER_WRMEM: begin
       end
@@ -147,6 +149,21 @@ always @(posedge clk or negedge rst) begin
       cur_state <= nxt_state;
    end
 end
+
+integer initseq_ptr = 0;
+wire initseq_en
+reg [1:0] initseq_type;
+assign io_rs = initseq_type == INITSEQ_CMD ? 1'b0 : 1'b1;
+
+always @(posedge clk or negedge rst) begin
+   if (~rst) begin
+      initseq_type <= INITSEQ_CMD;
+   end else begin
+
+   end
+end
+
+
 
 assign lcd_rst = io_rst;
 assign lcd_rs = io_rs;

@@ -5,7 +5,7 @@ PC_FILE := ${BOARD}.cst
 
 PROJ    := app
 SOURCES := fpga.v hdl/lcd_basic/proj_wrapper.v, hdl/lcd_basic/lcd_st7789v3.v
-YOSYS_DEFINES := -DN_LEDS=6
+YOSYS_DEFINES := -DN_LEDS=6 -DFPGA
 
 
 all: ${PROJ}.fs
