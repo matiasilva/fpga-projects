@@ -31,8 +31,8 @@ wire io_cs;
 localparam INITSEQ_SIZE  =  22;
 localparam LONG_DLY      =  8'h40; // 200 ms
 localparam SHORT_DLY     =  8'h80; // 10 ms
-localparam ARG_MSB       =  6;
-localparam ARG_BITS      =  {2'b00, {ARG_MSB{1'b1}}}; // max 63 args
+localparam ARG_MSB       =  1;
+localparam ARG_BITS      =  8'hff >> (7-ARG_MSB);
 localparam DISP_WIDTH    =  16'd135;
 localparam DISP_HEIGHT   =  16'd240;
 
@@ -48,10 +48,9 @@ reg [(INITSEQ_SIZE*8)-1:0] INITSEQ = {
    }; // implied initial
 
 typedef enum reg[1:0] {
-   INITSEQ_CMD,
-   INITSEQ_META,
-   INITSEQ_ARG
-} initseq_type;
+   INITSEQ_IDLE,
+   INITSEQ_ACTIVE,
+} initseq_state_t;
 
 typedef enum reg[2:0] {
    DRIVER_IDLE,
@@ -97,21 +96,7 @@ end
 
 /* serializer */
 
-reg [7:0] frame;
-reg [2:0] frame_ptr;
-wire msb_first = 1'b1;
-wire wr_frame = 0;
 
-always @(posedge clk or negedge rst) begin
-   if (~rst) begin
-      frame <= 0;
-      frame_ptr <= 0;
-   end else begin
-      if (wr_frame) begin
-         frame <= 8'b0;
-      end
-   end
-end
 
 driver_state_t cur_state, nxt_state;
 
@@ -160,27 +145,40 @@ always @(posedge clk or negedge rst) begin
    end
 end
 
-reg [$clog2(INITSEQ_SIZE)-1:0] initseq_ptr = 0;
-wire [$clog2(INITSEQ_SIZE)-1:0] initseq_ptr_nxt;
+initseq_state_t initseq_state, initseq_state_nxt;
+reg [$clog2(INITSEQ_SIZE)-1:0] initseq_ptr;
+wire [7:0] initseq_cmd = INITSEQ[8*initseq_ptr-:8];
+wire [7:0] initseq_meta = INITSEQ[(8*initseq_ptr)+1-:8];
+wire nargs = initseq_meta & ARG_BITS;
+wire [$clog2(INITSEQ_SIZE)-1:0] initseq_ptr_nxt = initseq_ptr + 2 + nargs;
+reg [ARG_MSB-1:0] initseq_tx_ctr, initseq_tx_ctr_nxt;
+wire initseq_data_loc = initseq_ptr + 2;
 reg initseq_bgn;
-reg [1:0] initseq_type;
-wire initseq_data, initseq_meta;
-wire []
+
+always @(*) begin
+   initseq_state_nxt = initseq_state;
+   initseq_tx_ctr_nxt = initseq_tx_ctr;
+   case (initseq_state)
+      INITSEQ_IDLE: begin
+         if (initseq_bgn) begin
+            initseq_state_nxt = INITSEQ_ACTIVE;
+            initseq_tx_ctr_nxt = 1 + nargs;
+            initseq_tx_data = {INITSEQ[8*(initseq_data_loc+nargs):8*initseq_data_loc], initseq_cmd}
+         end
+      end
+      INITSEQ_ACTIVE: begin
+         initseq_tx_ctr_nxt = initseq_tx_ctr - 1;
+      end
+   endcase
+end
 
 always @(posedge clk or negedge rst) begin
    if (~rst) begin
-      initseq_type <= INITSEQ_CMD;
+      initseq_ptr <= 0;
+      initseq_state <= INITSEQ_IDLE;
    end else begin
-      if (initseq_bgn) begin
-         initseq_data = INITSEQ[8*initseq_ptr-:8];
-         initseq_meta = INITSEQ[(8*initseq_ptr)+1-:8];
-         initseq_args = initseq_meta & ARG_BITS;
-         initseq_ptr_nxt = initseq_ptr + 2 + initseq_args;
-         initseq_ptr <= initseq_ptr;
-      
-      
-      end
-
+      initseq_state <= initseq_state_nxt;
+      initseq_tx_ctr <= initseq_tx_ctr_nxt;
    end
 end
 
