@@ -1,32 +1,46 @@
 `default_nettype none
+// TODO: add MSB/LSB toggle
 
-module serdes (
+// Consumes data from a source, like a FIFO, and serializes it
+// Data launches immediately as it is latched in
+
+module serdes #(
+   parameter WORD_WIDTH = 8
+) (
    input clk,
+   input rst,
 
+   // data in port
+   output wire ready,
+   input wire valid,
+   input wire [WORD_WIDTH-1:0] data,
+
+   // serial data
+   output wire sda
 );
 
-reg sd_nxt;
-reg [2:0] bit_ptr;
-reg [7:0] tx_frame;
-reg tx_frame_vld;
+localparam BIT_PTR_MAX = (1 << $clog2(WORD_WIDTH)) - 1;
+
+reg [$clog2(WORD_WIDTH)-1:0] bit_ptr;
+reg [7:0] frame;
 
 always @(posedge clk or negedge rst) begin
    if (~rst) begin
       sd_nxt <= 1'b0;
-      bit_ptr <= 3'h7;
+      bit_ptr <= BIT_PTR_MAX; // MSB first
    end else begin
-      if (tx_frame_vld) begin
-         sd_nxt <= tx_frame[bit_ptr];
+      if (valid && ready) begin
+         frame <= data;
+      if (bit_ptr == 0) begin
+         bit_ptr <= BIT_PTR_MAX;
+      end else begin
+         bit_ptr <= bit_ptr - 1;
       end
-      if(bit_ptr == 0) begin
-         tx_frame_vld <= 1'b0;
-      end
-      bit_ptr <= bit_ptr - 1;
-   
    end
-
 end
 
-assign sd = sd_nxt;
+assign ready = bit_ptr == BIT_PTR_MAX;
+assign sd = ready ? data[bit_ptr] : frame[bit_ptr]; // launch forwarded data on first cycle
+
 
 endmodule

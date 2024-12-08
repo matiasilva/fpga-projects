@@ -25,6 +25,30 @@ def test_fifo_runner():
     }
     runner.test(hdl_toplevel="fifo", **test_opts)
 
+
+def test_serdes_runner():
+    sim = os.getenv("SIM", "icarus")
+    root = Path(os.getenv("ROOT")) / 'hdl'
+
+    sources = [root / "serdes.v"]
+
+    runner = get_runner(sim)
+    runner.build(
+        sources=sources,
+        hdl_toplevel="serdes",
+        timescale=("1ns", "1ps"),
+        waves=True
+    )
+
+    test_opts = {
+        'waves': True,
+        'test_module': 'tb_serdes',
+        'timescale': ("1ns", "1ps")
+    }
+    runner.test(hdl_toplevel="serdes", **test_opts)
+
+
 if __name__ == "__main__":
     test_fifo_runner()
+    test_serdes_runner()
 
