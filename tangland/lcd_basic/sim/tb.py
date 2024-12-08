@@ -7,7 +7,6 @@ from cocotb.triggers import FallingEdge, Timer, ClockCycles
 @cocotb.test()
 async def smoke_test(dut):
     cocotb.start_soon(Clock(dut.clk, 1, units="ns").start())
-    print(type(dut))
     dut.rst.value = 0
     await ClockCycles(dut.clk, 2)
     dut.rst.value = 1
