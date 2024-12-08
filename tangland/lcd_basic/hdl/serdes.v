@@ -16,7 +16,7 @@ module serdes #(
    input wire [WORD_WIDTH-1:0] data,
 
    // serial data
-   output wire sda
+   output wire sd
 );
 
 localparam BIT_PTR_MAX = (1 << $clog2(WORD_WIDTH)) - 1;
@@ -26,16 +26,13 @@ reg [7:0] frame;
 
 always @(posedge clk or negedge rst) begin
    if (~rst) begin
-      sd_nxt <= 1'b0;
       bit_ptr <= BIT_PTR_MAX; // MSB first
    end else begin
-      if (valid && ready) begin
-         frame <= data;
-      if (bit_ptr == 0) begin
+      if (valid && ready) frame <= data;
+      if (bit_ptr == 0)
          bit_ptr <= BIT_PTR_MAX;
-      end else begin
+      else
          bit_ptr <= bit_ptr - 1;
-      end
    end
 end
 
