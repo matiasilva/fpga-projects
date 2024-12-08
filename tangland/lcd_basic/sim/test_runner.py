@@ -14,12 +14,14 @@ def test_fifo_runner():
     runner.build(
         sources=sources,
         hdl_toplevel="fifo",
+        timescale=("1ns", "1ps"),
+        waves=True
     )
 
     test_opts = {
         'waves': True,
-        'timescale': ('1ns', '100ps'),
-        'test_module': 'tb_fifo'
+        'test_module': 'tb_fifo',
+        'timescale': ("1ns", "1ps")
     }
     runner.test(hdl_toplevel="fifo", **test_opts)
 

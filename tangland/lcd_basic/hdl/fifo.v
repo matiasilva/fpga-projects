@@ -33,6 +33,9 @@ module fifo #(
       if (~rst) begin
          rd_ptr <= 0;
          wr_ptr <= 0;
+         for (integer i = 0; i < DEPTH; i++) begin
+            mem[i] <= 0;
+         end
       end else begin
          if (rd_ready && rd_valid) begin
             rd_ptr <= rd_ptr + 1;

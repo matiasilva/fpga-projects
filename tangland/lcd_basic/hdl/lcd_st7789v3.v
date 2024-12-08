@@ -49,7 +49,7 @@ reg [(INITSEQ_SIZE*8)-1:0] INITSEQ = {
 
 typedef enum reg[1:0] {
    INITSEQ_IDLE,
-   INITSEQ_ACTIVE,
+   INITSEQ_ACTIVE
 } initseq_state_t;
 
 typedef enum reg[2:0] {
