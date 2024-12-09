@@ -28,29 +28,10 @@ wire io_sd;
 wire io_scl;
 wire io_cs;
 
-localparam INITSEQ_SIZE  =  22;
 localparam LONG_DLY      =  8'h40; // 200 ms
 localparam SHORT_DLY     =  8'h80; // 10 ms
-localparam ARG_MSB       =  2;
-localparam ARG_BITS      =  (1 << (ARG_MSB + 1)) - 1;
 localparam DISP_WIDTH    =  16'd135;
 localparam DISP_HEIGHT   =  16'd240;
-
-
-reg [(INITSEQ_SIZE*8)-1:0] INITSEQ = {
-   `SWRESET_CMD, LONG_DLY ,
-   `SLPOUT_CMD , LONG_DLY ,
-   `CASET_CMD  , 8'd4     , 8'd0, 8'd0, DISP_WIDTH[15:8] , DISP_WIDTH[7:0] ,
-   `RASET_CMD  , 8'd4     , 8'd0, 8'd0, DISP_HEIGHT[15:8], DISP_HEIGHT[7:0],
-   `INVON_CMD  , SHORT_DLY,
-   `NORON_CMD  , SHORT_DLY,
-   `DISPON_CMD , SHORT_DLY
-   }; // implied initial
-
-typedef enum reg[1:0] {
-   INITSEQ_IDLE,
-   INITSEQ_ACTIVE
-} initseq_state_t;
 
 typedef enum reg[2:0] {
    DRIVER_IDLE,
@@ -141,45 +122,9 @@ always @(posedge clk or negedge rst) begin
    end
 end
 
-initseq_state_t initseq_state, initseq_state_nxt;
-reg [$clog2(INITSEQ_SIZE)-1:0] initseq_ptr;
-wire [7:0] initseq_cmd = INITSEQ[8*initseq_ptr-:8];
-wire [7:0] initseq_meta = INITSEQ[(8*initseq_ptr)+1-:8];
-wire nargs = initseq_meta & ARG_BITS;
-wire [$clog2(INITSEQ_SIZE)-1:0] initseq_ptr_nxt = initseq_ptr + 2 + nargs;
-reg [ARG_MSB-1:0] initseq_tx_ctr, initseq_tx_ctr_nxt;
-wire initseq_data_loc = initseq_ptr + 2;
-reg initseq_bgn;
 
-/* FIFO filler */
-wire [$clog2(ARG_BITS+1)-1:0] frame;
-reg [$clog2(ARG_BITS+1)-1:0] 
-always @(*) begin
-   initseq_state_nxt = initseq_state;
-   initseq_tx_ctr_nxt = initseq_tx_ctr;
-   case (initseq_state)
-      INITSEQ_IDLE: begin
-         if (initseq_bgn) begin
-            initseq_state_nxt = INITSEQ_ACTIVE;
-            initseq_tx_ctr_nxt = 1 + nargs;
-            initseq_tx_data = {INITSEQ[8*(initseq_data_loc+nargs):8*initseq_data_loc], initseq_cmd}
-         end
-      end
-      INITSEQ_ACTIVE: begin
-         initseq_tx_ctr_nxt = initseq_tx_ctr - 1;
-      end
-   endcase
-end
 
-always @(posedge clk or negedge rst) begin
-   if (~rst) begin
-      initseq_ptr <= 0;
-      initseq_state <= INITSEQ_IDLE;
-   end else begin
-      initseq_state <= initseq_state_nxt;
-      initseq_tx_ctr <= initseq_tx_ctr_nxt;
-   end
-end
+
 
 assign io_rs = initseq_type == INITSEQ_CMD ? 1'b0 : 1'b1;
 
