@@ -1,6 +1,7 @@
 // LCD display command sequence decoder
 // used for: init sequence, on-the-fly configuration
 `include "lcd_st7789v3.vh"
+`default_nettype none
 
 module decoder #(
    parameter WORD_WIDTH = 8
