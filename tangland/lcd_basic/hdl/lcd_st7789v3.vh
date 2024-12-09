@@ -17,5 +17,23 @@
 `define  SLPOUT_CMD 8'h11
 `define   NORON_CMD 8'h13
 
+`define LONG_DLY_MSB 7
+`define SHORT_DLY_MSB 6
+`define LONG_DLY (8'b1 << `LONG_DLY_MSB) // 200 ms
+`define SHORT_DLY (8'b1 << `SHORT_DLY_MSB) //  10 ms
+`define DISP_WIDTH 8'h87
+`define DISP_HEIGHT 8'hF0
+
+`ifdef FPGA
+   `define CLKFREQ 13.5*1000000
+   `define LONG_DLY_CYCLES 0.2*`CLKFREQ // 200ms
+   `define SHORT_DLY_CYCLES 0.01*`CLKFREQ // 10ms
+   `define HWRST_CYCLES 0.00002*`CLKFREQ // 20us
+`else
+   `define LONG_DLY_CYCLES 50
+   `define SHORT_DLY_CYCLES 10
+   `define HWRST_CYCLES 4
+`endif
+
 `endif // LCD_ST7789V3_VH
 
