@@ -14,16 +14,28 @@ module lcd_st7789v3 (
 localparam STALL_CTR_WIDTH = 24;
 localparam WORD_WIDTH      = 8;
 
+typedef enum reg[2:0] {
+   DRIVER_RESET,
+   DRIVER_START,
+   DRIVER_HWRST,
+   DRIVER_INITSEQ,
+   DRIVER_WRMEM
+} driver_state_t;
+
+driver_state_t state, state_nxt;
+
 reg io_rst;
 wire io_rs;
 wire io_sd;
-wire io_scl = clk;
 reg io_cs;
+wire io_scl = ~io_cs && clk;
 
 wire fifo_wr_ready;
 wire fifo_rd_valid;
 wire [WORD_WIDTH-1:0] fifo_rd_data;
 wire decoder_valid;
+wire decoder_idle;
+reg decoder_en;
 wire [WORD_WIDTH-1:0] decoder_data;
 wire serdes_ready;
 
@@ -50,11 +62,12 @@ serdes ser0 (
 decoder d0 (
 .clk   (clk),
    .rst   (rst),
-   .en    (state == DRIVER_INITSEQ),
+   .en    (decoder_en),
    .valid (decoder_valid),
    .ready (fifo_wr_ready),
    .data  (decoder_data),
-   .is_cmd(io_rs)
+   .is_cmd(io_rs),
+   .idle  (decoder_idle)
 );
 
 reg stall_en;
@@ -69,24 +82,15 @@ stall s0 (
    .done  (stall_done)
 );
 
-typedef enum reg[2:0] {
-   DRIVER_RESET,
-   DRIVER_HWRST,
-   DRIVER_INITSEQ,
-   DRIVER_WRMEM,
-   DRIVER_START,
-} driver_state_t;
-
-driver_state_t state, state_nxt;
-
 always @(*) begin
    state_nxt = state;
 
    stall_en = 0;
    stall_cycles = 0;
+   decoder_en = 0;
 
    io_rst = 1'b1;
-   io_cs = 1'b0;
+   io_cs = 1'b1;
    case (state)
       DRIVER_RESET: begin
          state_nxt = DRIVER_START;
@@ -104,11 +108,12 @@ always @(*) begin
          io_rst = 1'b0;
          if (stall_done) begin
             state_nxt = DRIVER_INITSEQ;
+            decoder_en = 1'b1;
          end
       end
       DRIVER_INITSEQ: begin
          io_cs = 1'b0;
-         if (initseq_done) state_nxt = DRIVER_WRMEM;
+         if (decoder_idle && !fifo_rd_valid && serdes_ready) state_nxt = DRIVER_WRMEM;
       end
       DRIVER_WRMEM: begin
       end

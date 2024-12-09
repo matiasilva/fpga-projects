@@ -16,7 +16,8 @@ module decoder #(
    output wire valid,
    output wire [WORD_WIDTH-1:0] data,
 
-   output wire is_cmd
+   output wire is_cmd,
+   output wire idle
 );
 
 localparam INITSEQ_SIZE  =  22;
@@ -33,14 +34,12 @@ reg [(INITSEQ_SIZE*8)-1:0] INITSEQ = {
    `DISPON_CMD , `SHORT_DLY
 }; // implied initial
 
-typedef enum reg[1:0] {
-   IDLE,
-   CMD,
-   ARGS,
-   STALL
-} state_t;
+localparam IDLE = 2'b00;
+localparam CMD  = 2'b01;
+localparam ARGS = 2'b10;
+localparam STALL= 2'b11;
 
-state_t state, state_nxt;
+reg [1:0] state, state_nxt;
 
 reg [ARG_MSB:0] arg_ctr, arg_ctr_nxt;
 reg [$clog2(INITSEQ_SIZE)-1:0] ptr, ptr_nxt;
@@ -49,6 +48,7 @@ reg [23:0] stall_ctr, stall_ctr_nxt;
 wire [WORD_WIDTH-1:0] meta               = INITSEQ[8*(ptr+1)-:8];
 wire [$clog2(INITSEQ_SIZE)-1:0] ptr_incr = ptr + 2 + meta[ARG_MSB:0];
 wire stall                               = meta[`LONG_DLY_MSB] | meta[`SHORT_DLY_MSB];
+wire last_page                           = ptr == (INITSEQ_SIZE - 1);
 
 reg [WORD_WIDTH-1:0] frame;
 reg frame_valid;
@@ -83,15 +83,15 @@ always @(*) begin
          if (ready) begin
             if (arg_ctr == 0) begin
                ptr_nxt = ptr + ptr_incr;
-               state_nxt = stall ? STALL : (ptr == (INITSEQ_SIZE - 1) ? IDLE : CMD);
+               state_nxt = stall ? STALL : (last_page ? IDLE : CMD);
             end else
                arg_ctr_nxt = arg_ctr - 1;
          end
       end
       STALL: begin
          stall_ctr_nxt = stall_ctr - 1;
-         if (stall_ctr == 0) state_nxt = IDLE;
-      end
+         if (stall_ctr == 0) state_nxt = last_page ? IDLE : CMD;
+         end
    endcase
 end
 
@@ -112,5 +112,6 @@ end
 assign data = frame;
 assign valid = frame_valid;
 assign is_cmd = state == CMD;
+assign idle = state == IDLE;
 
 endmodule
