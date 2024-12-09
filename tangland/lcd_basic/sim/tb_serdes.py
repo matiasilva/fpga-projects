@@ -1,6 +1,7 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles
+from random import getrandbits
 
 @cocotb.test()
 async def smoke_test(dut):
@@ -14,7 +15,21 @@ async def smoke_test(dut):
 
     WORD_WIDTH = dut.WORD_WIDTH.value.to_unsigned()
 
+    await RisingEdge(dut.clk) # sync
 
+    dut.valid.value = 1
+    data_to_wr = getrandbits(WORD_WIDTH)
+    dut.data.value = data_to_wr
+    await RisingEdge(dut.clk) # clock data in
+
+    await FallingEdge(dut.clk)
+    assert not dut.ready.value, "Serdes still ready!"
+    assert dut.frame.value == data_to_wr, "Serdes has wrong data frame"
+    for i in range(WORD_WIDTH-1, -1, -1):
+        assert dut.sd.value == (data_to_wr >> i) & 1, "Serdes output wrong data"
+        await FallingEdge(dut.clk)
+
+    await RisingEdge(dut.clk)
 
 import os
 from pathlib import Path
