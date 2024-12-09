@@ -31,8 +31,8 @@ wire io_cs;
 localparam INITSEQ_SIZE  =  22;
 localparam LONG_DLY      =  8'h40; // 200 ms
 localparam SHORT_DLY     =  8'h80; // 10 ms
-localparam ARG_MSB       =  1;
-localparam ARG_BITS      =  8'hff >> (7-ARG_MSB);
+localparam ARG_MSB       =  2;
+localparam ARG_BITS      =  (1 << (ARG_MSB + 1)) - 1;
 localparam DISP_WIDTH    =  16'd135;
 localparam DISP_HEIGHT   =  16'd240;
 
@@ -67,7 +67,7 @@ typedef enum reg[2:0] {
 
 localparam   BUSY_CTR_WIDTH = 16;
 
-busy_state_t busy_state ;
+busy_state_t busy_state;
 reg busy_bgn;
 wire busy_active = busy_state == BUSY_ACTIVE;
 reg [BUSY_CTR_WIDTH-1:0] busy_ctr_nxt;
@@ -93,10 +93,6 @@ always @(posedge clk or negedge rst) begin
       end
    end
 end
-
-/* serializer */
-
-
 
 driver_state_t cur_state, nxt_state;
 
@@ -155,6 +151,9 @@ reg [ARG_MSB-1:0] initseq_tx_ctr, initseq_tx_ctr_nxt;
 wire initseq_data_loc = initseq_ptr + 2;
 reg initseq_bgn;
 
+/* FIFO filler */
+wire [$clog2(ARG_BITS+1)-1:0] frame;
+reg [$clog2(ARG_BITS+1)-1:0] 
 always @(*) begin
    initseq_state_nxt = initseq_state;
    initseq_tx_ctr_nxt = initseq_tx_ctr;

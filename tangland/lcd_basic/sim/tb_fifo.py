@@ -108,19 +108,26 @@ async def smoke_test(dut):
 
 import os
 from pathlib import Path
-from cocotb_tools.runner import get_runner
+from cocotb_tools import runner
+import pytest
 
-def test_fifo_runner():
-    sim = os.getenv("SIM", "icarus")
+@pytest.mark.parametrize("depth", [4, 8, 64])
+@pytest.mark.parametrize("word_width", [8, 16, 32])
+def test_fifo(depth: int, word_width: int):
+    sim = runner.Icarus()
     root = Path(os.getenv("ROOT")) / 'hdl'
 
     sources = [root / "fifo.v"]
 
-    runner = get_runner(sim)
-    runner.build(
+    sim.build(
         sources=sources,
         hdl_toplevel="fifo",
         timescale=("1ns", "1ps"),
+        build_dir=f"build/build_fifo_{depth}_{word_width}",
+        parameters={
+            "DEPTH": depth,
+            "WORD_WIDTH": word_width
+        },
         waves=True
     )
 
@@ -129,7 +136,7 @@ def test_fifo_runner():
         'test_module': 'tb_fifo',
         'timescale': ("1ns", "1ps")
     }
-    runner.test(hdl_toplevel="fifo", **test_opts)
+    sim.test(hdl_toplevel="fifo", **test_opts)
 
 if __name__ == "__main__":
     test_fifo_runner()

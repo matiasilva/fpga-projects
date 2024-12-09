@@ -1,5 +1,6 @@
 .DS_Store
 *.fs
 sim_build
+build
 __pycache__
 results.xml

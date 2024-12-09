@@ -30,7 +30,6 @@ A successful HW reset needs:
 1. Reset asserted for >10us, active low
 2. No further activity for at least 120ms
 
-
 ## Frame data
 
 * 1 byte per color component with upper 6 bits containing valid data
