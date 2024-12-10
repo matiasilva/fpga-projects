@@ -28,6 +28,7 @@ module decoder #(
 
 localparam INITSEQ_SIZE  =  22;
 localparam ARG_MSB       =  2;
+localparam STALL_CTR_WIDTH = 24;
 // localparam ARG_BITS      =  (1 << (ARG_MSB + 1)) - 1;
 
 reg [(INITSEQ_SIZE*8)-1:0] INITSEQ = {
@@ -50,12 +51,11 @@ reg [2:0] state, state_nxt;
 
 reg [ARG_MSB:0] arg_ctr, arg_ctr_nxt;
 reg [$clog2(INITSEQ_SIZE)-1:0] ptr, ptr_nxt;
-reg [23:0] stall_ctr, stall_ctr_nxt;
+reg [STALL_CTR_WIDTH-1:0] stall_ctr, stall_ctr_nxt;
 
 wire [WORD_WIDTH-1:0] meta               = INITSEQ[WORD_WIDTH*(ptr-1)+:WORD_WIDTH];
 wire [$clog2(INITSEQ_SIZE)-1:0] ptr_page_end = ptr - 1 - meta[ARG_MSB:0];
 wire stall                               = meta[`LONG_DLY_MSB] | meta[`SHORT_DLY_MSB];
-
 
 reg [PACKET_WIDTH-1:0] frame;
 reg frame_valid;
@@ -64,7 +64,7 @@ always @(*) begin
    state_nxt = state;
    arg_ctr_nxt = arg_ctr;
    ptr_nxt = ptr;
-   stall_ctr_nxt = meta[`LONG_DLY_MSB] ? `LONG_DLY_CYCLES : (meta[`SHORT_DLY_MSB] ? `SHORT_DLY_CYCLES : 0);
+   stall_ctr_nxt = stall_ctr;
 
    frame = 0;
    frame_valid = 1'b0;
@@ -74,7 +74,6 @@ always @(*) begin
          frame = {1'b0, INITSEQ[WORD_WIDTH*ptr+:WORD_WIDTH]};
          frame_valid = 1'b1;
          if (meta[ARG_MSB:0] == 0) begin // no args
-            ptr_nxt = ptr_page_end - 1;
             state_nxt = UPSTREAM_WAIT;
          end else begin
             state_nxt = ARGS;
@@ -85,7 +84,6 @@ always @(*) begin
          frame = {1'b1, INITSEQ[WORD_WIDTH*(ptr-arg_ctr)+:WORD_WIDTH]};
          frame_valid = 1'b1;
          if (arg_ctr == 0) begin
-            ptr_nxt = ptr_page_end - 1;
             // state_nxt = stall ? STALL : (last_page ? IDLE : CMD);
             // only need above line if serdes is in a diff clock domain (and
             // below line should really be redone)
@@ -100,7 +98,11 @@ always @(*) begin
       UPSTREAM_WAIT: begin
          // we will stay here for one cycle if serdes has somehow clocked out
          // all 8 bits in one cycle
-         if (!upstream_wait) state_nxt = stall ? STALL : (last_page ? IDLE : CMD);
+         if (!upstream_wait) begin
+            state_nxt = stall ? STALL : (last_page ? IDLE : CMD);
+            stall_ctr_nxt = meta[`LONG_DLY_MSB] ? `LONG_DLY_CYCLES : (meta[`SHORT_DLY_MSB] ? `SHORT_DLY_CYCLES : 0);
+            ptr_nxt = ptr_page_end - 1; // set pointer
+         end
       end
    endcase
 end

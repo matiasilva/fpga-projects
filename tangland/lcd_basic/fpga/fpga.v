@@ -12,7 +12,7 @@ module top (
 );
 
 wire hclk;
-assign led = {(`N_LEDS-1){1'b0}, 1'b1};
+assign led = {{(`N_LEDS-1){1'b0}}, 1'b1};
 
 CLKDIV clkdiv_inst (
 .HCLKIN(clk),
@@ -27,7 +27,7 @@ lcd_st7789v3 lcd0 (  .clk(hclk),
                      .lcd_rst(lcd_rst),
                      .lcd_rs(lcd_rs),
                      .lcd_sd(lcd_sd),
-                     .lcd_scl(lcd_sck),
+                     .lcd_sck(lcd_sck),
                      .lcd_cs(lcd_cs));
 
 endmodule

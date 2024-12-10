@@ -25,7 +25,7 @@
 `define DISP_HEIGHT 8'hF0
 
 `ifdef FPGA
-   `define CLKFREQ 13.5*1000000
+   `define CLKFREQ (27/8)*1000000
    `define LONG_DLY_CYCLES 0.2*`CLKFREQ // 200ms
    `define SHORT_DLY_CYCLES 0.01*`CLKFREQ // 10ms
    `define HWRST_CYCLES 0.00002*`CLKFREQ // 20us

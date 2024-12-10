@@ -3,8 +3,9 @@ FAMILY  := GW1N-9C
 DEVICE  := GW1NR-LV9QN88PC6/I5
 PC_FILE := ${BOARD}.cst
 
-PROJ    := app
-SOURCES := fpga.v hdl/lcd_basic/proj_wrapper.v, hdl/lcd_basic/lcd_st7789v3.v
+HDLDIR  := ${ROOT}/hdl
+PROJ    := lcd_basic
+SOURCES := fpga.v ${HDLDIR}/serdes.v ${HDLDIR}/fifo.v ${HDLDIR}/decoder.v ${HDLDIR}/stall.v ${HDLDIR}/lcd_st7789v3.v
 YOSYS_DEFINES := -DN_LEDS=6 -DFPGA
 
 
@@ -12,7 +13,7 @@ all: ${PROJ}.fs
 
 # synth
 ${PROJ}.json: ${SOURCES}
-	yosys ${YOSYS_DEFINES} -p "read_verilog $<; synth_gowin -top top -json $@" ${SOURCES}
+	yosys ${YOSYS_DEFINES} -p "read_verilog -sv $^; synth_gowin -top top -json $@"
 
 # pnr
 ${PROJ}_pnr.json: ${PROJ}.json
