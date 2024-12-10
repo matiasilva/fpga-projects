@@ -5,7 +5,8 @@
 // Data launches immediately as it is latched in
 
 module serdes #(
-   parameter WORD_WIDTH = 8
+   parameter WORD_WIDTH = 8,
+   parameter PACKET_WIDTH = 9 // packet = metadata + word
 ) (
    input clk,
    input rst,
@@ -13,18 +14,20 @@ module serdes #(
    // data in port
    output reg ready,
    input wire valid,
-   input wire [WORD_WIDTH-1:0] data,
+   input wire [PACKET_WIDTH-1:0] data,
 
    // serial data
    output wire sd,
    output wire cs,
-   output wire sck
+   output wire sck,
+   output wire rs
 );
 
 localparam BIT_PTR_MAX = (1 << $clog2(WORD_WIDTH)) - 1;
+localparam RSEL_MSB = PACKET_WIDTH-1;
 
 reg [$clog2(WORD_WIDTH)-1:0] bit_ptr, bit_ptr_nxt;
-reg [7:0] frame, frame_nxt;
+reg [PACKET_WIDTH-1:0] frame, frame_nxt;
 wire last_bit = bit_ptr == 0;
 
 typedef enum reg[1:0] {
@@ -76,6 +79,7 @@ always @(*) begin
 end
 
 assign sd = frame[bit_ptr];
+assign rs = frame[RSEL_MSB];
 assign cs = !(state == ACTIVE);
 assign sck = clk && ~cs;
 

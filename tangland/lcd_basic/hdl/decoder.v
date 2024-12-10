@@ -8,7 +8,8 @@
 `default_nettype none
 
 module decoder #(
-   parameter WORD_WIDTH = 8
+   parameter WORD_WIDTH = 8,
+   parameter PACKET_WIDTH = 9
 )(
    input wire clk,
    input wire rst,
@@ -19,7 +20,7 @@ module decoder #(
    // to FIFO
    input wire ready,
    output wire valid,
-   output wire [WORD_WIDTH-1:0] data,
+   output wire [PACKET_WIDTH-1:0] data,
 
    output wire is_cmd,
    output wire last_page
@@ -51,12 +52,12 @@ reg [ARG_MSB:0] arg_ctr, arg_ctr_nxt;
 reg [$clog2(INITSEQ_SIZE)-1:0] ptr, ptr_nxt;
 reg [23:0] stall_ctr, stall_ctr_nxt;
 
-wire [WORD_WIDTH-1:0] meta               = INITSEQ[8*(ptr-1)+:8];
+wire [WORD_WIDTH-1:0] meta               = INITSEQ[WORD_WIDTH*(ptr-1)+:WORD_WIDTH];
 wire [$clog2(INITSEQ_SIZE)-1:0] ptr_page_end = ptr - 1 - meta[ARG_MSB:0];
 wire stall                               = meta[`LONG_DLY_MSB] | meta[`SHORT_DLY_MSB];
 
 
-reg [WORD_WIDTH-1:0] frame;
+reg [PACKET_WIDTH-1:0] frame;
 reg frame_valid;
 
 always @(*) begin
@@ -70,7 +71,7 @@ always @(*) begin
    case (state)
       IDLE: if (en) state_nxt = CMD;
       CMD: begin
-         frame = INITSEQ[8*ptr+:8];
+         frame = {1'b0, INITSEQ[WORD_WIDTH*ptr+:WORD_WIDTH]};
          frame_valid = 1'b1;
          if (meta[ARG_MSB:0] == 0) begin // no args
             ptr_nxt = ptr_page_end - 1;
@@ -81,7 +82,7 @@ always @(*) begin
          end
       end
       ARGS: begin
-         frame = INITSEQ[8*(ptr-arg_ctr)+:8];
+         frame = {1'b1, INITSEQ[WORD_WIDTH*(ptr-arg_ctr)+:WORD_WIDTH]};
          frame_valid = 1'b1;
          if (arg_ctr == 0) begin
             ptr_nxt = ptr_page_end - 1;

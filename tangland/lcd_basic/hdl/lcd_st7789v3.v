@@ -12,7 +12,7 @@ module lcd_st7789v3 (
 );
 
 localparam STALL_CTR_WIDTH = 24;
-localparam WORD_WIDTH      = 8;
+localparam WORD_WIDTH      = 9;
 
 typedef enum reg[2:0] {
    DRIVER_RESET,
@@ -40,7 +40,7 @@ reg decoder_en;
 wire decoder_upstream_wait = fifo_rd_valid || !serdes_ready; // wait until FIFO empty and serdes done
 wire [WORD_WIDTH-1:0] decoder_data;
 
-fifo f0 (
+fifo #(.WORD_WIDTH(WORD_WIDTH)) f0 (
    .clk     (clk),
    .rst     (rst),
    .wr_ready(fifo_wr_ready),
@@ -51,7 +51,7 @@ fifo f0 (
    .rd_data (fifo_rd_data)
 );
 
-serdes ser0 (
+serdes #(.PACKET_WIDTH(WORD_WIDTH)) ser0 (
    .clk  (clk),
    .rst  (rst),
    .ready(serdes_ready),
@@ -59,10 +59,11 @@ serdes ser0 (
    .data (fifo_rd_data),
    .sd   (io_sd),
    .cs   (io_cs),
-   .sck  (io_sck)
+   .sck  (io_sck),
+   .rs   (io_rs)
 );
 
-decoder d0 (
+decoder #(.PACKET_WIDTH(WORD_WIDTH)) d0 (
 .clk              (clk),
    .rst           (rst),
    .en            (decoder_en),
@@ -70,7 +71,6 @@ decoder d0 (
    .valid         (decoder_valid),
    .ready         (fifo_wr_ready),
    .data          (decoder_data),
-   .is_cmd        (io_rs),
    .last_page     (decoder_last_page)
 );
 
