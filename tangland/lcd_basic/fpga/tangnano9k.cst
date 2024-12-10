@@ -19,8 +19,8 @@ IO_PORT "lcd_rs" IO_TYPE=LVCMOS33;
 IO_LOC  "lcd_sd" 77;
 IO_PORT "lcd_sd" IO_TYPE=LVCMOS33;
 
-IO_LOC  "lcd_scl" 76;
-IO_PORT "lcd_scl" IO_TYPE=LVCMOS33;
+IO_LOC  "lcd_sck" 76;
+IO_PORT "lcd_sck" IO_TYPE=LVCMOS33;
 
 IO_LOC  "lcd_cs" 48;
 IO_PORT "lcd_cs" IO_TYPE=LVCMOS33;

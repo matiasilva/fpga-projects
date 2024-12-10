@@ -1,7 +1,7 @@
 `default_nettype none
 
 module fifo #(
-   parameter DEPTH = 4,
+   parameter DEPTH = 8,
    parameter WORD_WIDTH = 8
 )(
    input wire clk,

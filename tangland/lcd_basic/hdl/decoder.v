@@ -1,5 +1,9 @@
 // LCD display command sequence decoder
 // used for: init sequence, on-the-fly configuration
+// assumption: FIFO is deep enough for command (1 byte) + max args (4 bytes)
+// assumption: same clock domain as serdes, data is clocked out at the same
+// rate
+
 `include "lcd_st7789v3.vh"
 `default_nettype none
 
@@ -10,6 +14,7 @@ module decoder #(
    input wire rst,
 
    input wire en,
+   input wire upstream_wait,
 
    // to FIFO
    input wire ready,
@@ -17,7 +22,7 @@ module decoder #(
    output wire [WORD_WIDTH-1:0] data,
 
    output wire is_cmd,
-   output wire idle
+   output wire last_page
 );
 
 localparam INITSEQ_SIZE  =  22;
@@ -34,21 +39,22 @@ reg [(INITSEQ_SIZE*8)-1:0] INITSEQ = {
    `DISPON_CMD , `SHORT_DLY
 }; // implied initial
 
-localparam IDLE = 2'b00;
-localparam CMD  = 2'b01;
-localparam ARGS = 2'b10;
-localparam STALL= 2'b11;
+localparam IDLE          = 3'b000;
+localparam CMD           = 3'b001;
+localparam ARGS          = 3'b010;
+localparam STALL         = 3'b011;
+localparam UPSTREAM_WAIT = 3'b100;
 
-reg [1:0] state, state_nxt;
+reg [2:0] state, state_nxt;
 
 reg [ARG_MSB:0] arg_ctr, arg_ctr_nxt;
 reg [$clog2(INITSEQ_SIZE)-1:0] ptr, ptr_nxt;
 reg [23:0] stall_ctr, stall_ctr_nxt;
 
-wire [WORD_WIDTH-1:0] meta               = INITSEQ[8*(ptr+1)-:8];
-wire [$clog2(INITSEQ_SIZE)-1:0] ptr_incr = ptr + 2 + meta[ARG_MSB:0];
+wire [WORD_WIDTH-1:0] meta               = INITSEQ[8*(ptr-1)+:8];
+wire [$clog2(INITSEQ_SIZE)-1:0] ptr_page_end = ptr - 1 - meta[ARG_MSB:0];
 wire stall                               = meta[`LONG_DLY_MSB] | meta[`SHORT_DLY_MSB];
-wire last_page                           = ptr == (INITSEQ_SIZE - 1);
+
 
 reg [WORD_WIDTH-1:0] frame;
 reg frame_valid;
@@ -61,37 +67,40 @@ always @(*) begin
 
    frame = 0;
    frame_valid = 1'b0;
-
    case (state)
       IDLE: if (en) state_nxt = CMD;
       CMD: begin
-         frame = INITSEQ[8*ptr-:8];
+         frame = INITSEQ[8*ptr+:8];
          frame_valid = 1'b1;
-         if (ready) begin
-            if (meta[ARG_MSB:0] == 0) begin
-               ptr_nxt = ptr_incr;
-               if (stall) state_nxt = STALL;
-            end else begin
-               state_nxt = ARGS;
-               arg_ctr_nxt = meta[ARG_MSB:0];
-            end
+         if (meta[ARG_MSB:0] == 0) begin // no args
+            ptr_nxt = ptr_page_end - 1;
+            state_nxt = UPSTREAM_WAIT;
+         end else begin
+            state_nxt = ARGS;
+            arg_ctr_nxt = meta[ARG_MSB:0];
          end
       end
       ARGS: begin
-         frame = INITSEQ[8*(ptr_incr-arg_ctr)-:8];
+         frame = INITSEQ[8*(ptr-arg_ctr)+:8];
          frame_valid = 1'b1;
-         if (ready) begin
-            if (arg_ctr == 0) begin
-               ptr_nxt = ptr + ptr_incr;
-               state_nxt = stall ? STALL : (last_page ? IDLE : CMD);
-            end else
-               arg_ctr_nxt = arg_ctr - 1;
-         end
+         if (arg_ctr == 0) begin
+            ptr_nxt = ptr_page_end - 1;
+            // state_nxt = stall ? STALL : (last_page ? IDLE : CMD);
+            // only need above line if serdes is in a diff clock domain (and
+            // below line should really be redone)
+            state_nxt = UPSTREAM_WAIT;
+         end else
+            arg_ctr_nxt = arg_ctr - 1;
       end
       STALL: begin
          stall_ctr_nxt = stall_ctr - 1;
          if (stall_ctr == 0) state_nxt = last_page ? IDLE : CMD;
-         end
+      end
+      UPSTREAM_WAIT: begin
+         // we will stay here for one cycle if serdes has somehow clocked out
+         // all 8 bits in one cycle
+         if (!upstream_wait) state_nxt = stall ? STALL : (last_page ? IDLE : CMD);
+      end
    endcase
 end
 
@@ -99,7 +108,7 @@ always @(posedge clk or negedge rst) begin
    if (~rst) begin
       state <= IDLE;
       arg_ctr <= 0;
-      ptr <= 0;
+      ptr <= INITSEQ_SIZE - 1;
       stall_ctr <= 0;
    end else begin
       state <= state_nxt;
@@ -109,9 +118,9 @@ always @(posedge clk or negedge rst) begin
    end
 end
 
-assign data = frame;
-assign valid = frame_valid;
-assign is_cmd = state == CMD;
-assign idle = state == IDLE;
+assign data      = frame;
+assign valid     = frame_valid;
+assign is_cmd    = state        == CMD;
+assign last_page = ptr_page_end == 0;
 
 endmodule

@@ -11,18 +11,21 @@ module serdes #(
    input rst,
 
    // data in port
-   output wire ready,
+   output reg ready,
    input wire valid,
    input wire [WORD_WIDTH-1:0] data,
 
    // serial data
-   output wire sd
+   output wire sd,
+   output wire cs,
+   output wire sck
 );
 
 localparam BIT_PTR_MAX = (1 << $clog2(WORD_WIDTH)) - 1;
 
 reg [$clog2(WORD_WIDTH)-1:0] bit_ptr, bit_ptr_nxt;
 reg [7:0] frame, frame_nxt;
+wire last_bit = bit_ptr == 0;
 
 typedef enum reg[1:0] {
    IDLE,
@@ -47,17 +50,24 @@ always @(*) begin
    state_nxt = state;
    frame_nxt = frame;
    bit_ptr_nxt = bit_ptr;
+
+   ready = 1'b0;
    case (state)
       IDLE: begin
+         ready = 1'b1;
          if (valid && ready) begin
             state_nxt = ACTIVE;
             frame_nxt = data;
          end
       end
       ACTIVE: begin
-         if (bit_ptr == 0) begin
+         if (last_bit) begin
             bit_ptr_nxt = BIT_PTR_MAX;
-            state_nxt = IDLE;
+            ready = 1'b1;
+            if (valid && ready) // continue in ACTIVE if FIFO has data
+               frame_nxt = data;
+            else
+               state_nxt = IDLE;
          end else begin
             bit_ptr_nxt = bit_ptr - 1;
          end
@@ -65,7 +75,8 @@ always @(*) begin
    endcase
 end
 
-assign ready = state == IDLE;
 assign sd = frame[bit_ptr];
+assign cs = !(state == ACTIVE);
+assign sck = clk && ~cs;
 
 endmodule

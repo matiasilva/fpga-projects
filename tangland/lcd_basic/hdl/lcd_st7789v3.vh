@@ -30,8 +30,8 @@
    `define SHORT_DLY_CYCLES 0.01*`CLKFREQ // 10ms
    `define HWRST_CYCLES 0.00002*`CLKFREQ // 20us
 `else
-   `define LONG_DLY_CYCLES 50
-   `define SHORT_DLY_CYCLES 10
+   `define LONG_DLY_CYCLES 10
+   `define SHORT_DLY_CYCLES 5
    `define HWRST_CYCLES 4
 `endif
 
