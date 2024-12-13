@@ -22,7 +22,6 @@ module decoder #(
    output wire valid,
    output wire [PACKET_WIDTH-1:0] data,
 
-   output wire is_cmd,
    output wire last_page
 );
 
@@ -123,7 +122,6 @@ end
 
 assign data      = frame;
 assign valid     = frame_valid;
-assign is_cmd    = state        == CMD;
 assign last_page = ptr_page_end == 0;
 
 endmodule

@@ -5,7 +5,7 @@ PC_FILE := ${BOARD}.cst
 
 HDLDIR  := ${ROOT}/hdl
 PROJ    := lcd_basic
-SOURCES := fpga.v ${HDLDIR}/serdes.v ${HDLDIR}/fifo.v ${HDLDIR}/decoder.v ${HDLDIR}/stall.v ${HDLDIR}/lcd_st7789v3.v
+SOURCES := fpga.v ${HDLDIR}/serdes.v ${HDLDIR}/fifo.v ${HDLDIR}/decoder.v ${HDLDIR}/stall.v ${HDLDIR}/lcd_st7789v3.v ${HDLDIR}/ram_writer.v
 YOSYS_DEFINES := -DN_LEDS=6 -DFPGA
 
 

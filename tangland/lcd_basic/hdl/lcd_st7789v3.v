@@ -19,7 +19,8 @@ typedef enum reg[2:0] {
    DRIVER_START,
    DRIVER_HWRST,
    DRIVER_INITSEQ,
-   DRIVER_WRMEM
+   DRIVER_WRMEM,
+   DRIVER_IDLE
 } driver_state_t;
 
 driver_state_t state, state_nxt;
@@ -39,13 +40,19 @@ wire decoder_last_page;
 reg decoder_en;
 wire decoder_upstream_wait = fifo_rd_valid || !serdes_ready; // wait until FIFO empty and serdes done
 wire [WORD_WIDTH-1:0] decoder_data;
+wire [WORD_WIDTH-1:0] ram_writer_data;
+wire ram_writer_valid;
+wire ram_writer_done;
+reg ram_writer_en;
+wire [WORD_WIDTH-1:0] fifo_wr_data = state == DRIVER_INITSEQ ? decoder_data : ram_writer_data;
+wire fifo_wr_valid = state == DRIVER_INITSEQ ? decoder_valid : ram_writer_valid;
 
 fifo #(.WORD_WIDTH(WORD_WIDTH)) f0 (
    .clk     (clk),
    .rst     (rst),
    .wr_ready(fifo_wr_ready),
-   .wr_valid(decoder_valid),
-   .wr_data (decoder_data),
+   .wr_valid(fifo_wr_valid),
+   .wr_data (fifo_wr_data),
    .rd_ready(serdes_ready),
    .rd_valid(fifo_rd_valid),
    .rd_data (fifo_rd_data)
@@ -86,12 +93,23 @@ stall s0 (
    .done  (stall_done)
 );
 
+ram_writer #(.PACKET_WIDTH(WORD_WIDTH)) rw0 (
+   .clk   (clk),
+   .rst   (rst),
+   .en    (ram_writer_en),
+   .done  (ram_writer_done),
+   .ready (fifo_wr_ready),
+   .valid (ram_writer_valid),
+   .data  (ram_writer_data)
+);
+
 always @(*) begin
    state_nxt = state;
 
    stall_en = 0;
    stall_cycles = 0;
-   decoder_en = 0;
+   decoder_en = 1'b0;
+   ram_writer_en = 1'b0;
 
    io_rst = 1'b1;
    case (state)
@@ -115,9 +133,15 @@ always @(*) begin
          end
       end
       DRIVER_INITSEQ: begin
-         if (decoder_last_page && !decoder_upstream_wait) state_nxt = DRIVER_WRMEM;
+         if (decoder_last_page && !decoder_upstream_wait) begin
+            state_nxt = DRIVER_WRMEM;
+            ram_writer_en = 1'b1;
+         end
       end
       DRIVER_WRMEM: begin
+         if (ram_writer_done) state_nxt = DRIVER_IDLE;
+      end
+      DRIVER_IDLE: begin
       end
    endcase
 

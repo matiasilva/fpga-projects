@@ -22,7 +22,7 @@ def test_lcd_runner():
     sim = runner.Icarus()
     root = Path(os.getenv("ROOT")) / 'hdl'
 
-    sources = ["lcd_st7789v3.v", "serdes.v", "fifo.v", "decoder.v", "stall.v"]
+    sources = ["lcd_st7789v3.v", "serdes.v", "fifo.v", "decoder.v", "stall.v", "ram_writer.v"]
     sources = [root / s for s in sources]
 
     sim.build(
