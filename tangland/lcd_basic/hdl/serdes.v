@@ -30,12 +30,10 @@ reg [$clog2(WORD_WIDTH)-1:0] bit_ptr, bit_ptr_nxt;
 reg [PACKET_WIDTH-1:0] frame, frame_nxt;
 wire last_bit = bit_ptr == 0;
 
-typedef enum reg[1:0] {
-   IDLE,
-   ACTIVE
-} state_t;
+localparam IDLE = 2'b00;
+localparam ACTIVE = 2'b01;
 
-state_t state, state_nxt;
+reg [1:0] state, state_nxt;
 
 always @(posedge clk or negedge rst) begin
    if (~rst) begin

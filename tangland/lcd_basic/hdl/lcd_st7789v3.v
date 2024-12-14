@@ -14,16 +14,13 @@ module lcd_st7789v3 (
 localparam STALL_CTR_WIDTH = 24;
 localparam WORD_WIDTH      = 9;
 
-typedef enum reg[2:0] {
-   DRIVER_RESET,
-   DRIVER_START,
-   DRIVER_HWRST,
-   DRIVER_INITSEQ,
-   DRIVER_WRMEM,
-   DRIVER_IDLE
-} driver_state_t;
+localparam DRIVER_IDLE    = 3'b000;
+localparam DRIVER_START   = 3'b001;
+localparam DRIVER_HWRST   = 3'b010;
+localparam DRIVER_INITSEQ = 3'b011;
+localparam DRIVER_WRMEM   = 3'b100;
 
-driver_state_t state, state_nxt;
+reg[2:0] state, state_nxt;
 
 reg io_rst;
 wire io_rs;
