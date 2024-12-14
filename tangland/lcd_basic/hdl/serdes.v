@@ -8,8 +8,8 @@ module serdes #(
    parameter WORD_WIDTH = 8,
    parameter PACKET_WIDTH = 9 // packet = metadata + word
 ) (
-   input clk,
-   input rst,
+   input wire clk,
+   input wire rst,
 
    // data in port
    output reg ready,

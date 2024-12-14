@@ -33,6 +33,7 @@ always @(*) begin
    state_nxt = state;
    data_ctr_nxt = data_ctr;
    valid = 1'b1;
+   done = 1'b0;
    data = 0;
 
    case (state)

@@ -21,8 +21,8 @@
 `define SHORT_DLY_MSB 6
 `define LONG_DLY (8'b1 << `LONG_DLY_MSB) // 200 ms
 `define SHORT_DLY (8'b1 << `SHORT_DLY_MSB) //  10 ms
-`define DISP_WIDTH 8'h87
-`define DISP_HEIGHT 8'hF0
+`define DISP_WIDTH 8'd135
+`define DISP_HEIGHT 8'd240
 
 `ifdef FPGA
    `define CLKFREQ (27/8)*1000000

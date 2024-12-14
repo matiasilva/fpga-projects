@@ -14,18 +14,19 @@ module lcd_st7789v3 (
 localparam STALL_CTR_WIDTH = 24;
 localparam WORD_WIDTH      = 9;
 
-localparam DRIVER_IDLE    = 3'b000;
+localparam DRIVER_RESET   = 3'b000;
 localparam DRIVER_START   = 3'b001;
 localparam DRIVER_HWRST   = 3'b010;
 localparam DRIVER_INITSEQ = 3'b011;
 localparam DRIVER_WRMEM   = 3'b100;
+localparam DRIVER_IDLE    = 3'b101;
 
 reg[2:0] state, state_nxt;
 
 reg io_rst;
 wire io_rs;
 wire io_sd;
-reg io_cs;
+wire io_cs;
 wire io_sck;
 
 wire fifo_wr_ready;

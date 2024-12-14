@@ -33,8 +33,8 @@ localparam STALL_CTR_WIDTH = 24;
 reg [(INITSEQ_SIZE*8)-1:0] INITSEQ = {
    `SWRESET_CMD, `LONG_DLY ,
    `SLPOUT_CMD , `LONG_DLY ,
-   `CASET_CMD  , 8'd4     , 8'd0, 8'd0, 8'd0, `DISP_WIDTH ,
-   `RASET_CMD  , 8'd4     , 8'd0, 8'd0, 8'd0, `DISP_HEIGHT,
+   `CASET_CMD  , 8'd4     , 8'h00, 8'h28, 8'h01, 8'h17 ,
+   `RASET_CMD  , 8'd4     , 8'h00, 8'h35, 8'h00, 8'hbb,
    `INVON_CMD  , `SHORT_DLY,
    `NORON_CMD  , `SHORT_DLY,
    `DISPON_CMD , `SHORT_DLY
